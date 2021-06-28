@@ -1,0 +1,69 @@
+<!doctype html>
+	<head>
+		<meta charset="utf-8">
+		<title>WebGL - Procedural Planet Rendering Experiment 1</title>
+		<link rel="stylesheet" href="/css/styles.css">
+	</head>
+	<body>
+		<div id="canvasWrapper">
+			<canvas id="canvas" width="1024" height="512">
+			</canvas>
+			<div id="console" class="">
+				<div id="consoleText">
+				</div>
+				<div id="consoleInput">
+					<input type="text" id="input" name="input" />
+				</div>
+			</div>
+		</div>
+		<p>Movement: WASDQE and arrow keys.</p>
+		<label for="maxdepth">Max QuadTree node depth</label>
+		<input id="maxdepth" type="number" title="Maximum QuadTree depth" value="" style="width:40px;" maxlength="2" max="22" min="0" /><br/>
+		<label for="maxdepth">Distance to planet multiplier</label>
+		<input id="distancemul" type="number" title="Distance to planet multiplier" value="1" style="width:40px;" maxlength="2" max="20" min="0" /><br/>
+		
+		<div>
+		<label for="lightx">Sun X position</label><br/>
+		<input type="range" id="lightx" name="lightx" min="-5000" max="5000" value="0" step="1" style="width:400px"><br/>
+		<label for="freezeFrustum">Freeze Frustum View</label>
+		<input type="checkbox" id="freezeFrustum" /><br/>
+		<label for="drawFrustum">Draw Frustum View</label>
+		<input type="checkbox" id="drawFrustum" /><br/>
+		<label for="drawWireframe">Draw wireframe</label>
+		<input type="checkbox" id="drawWireframe" checked/><br/>
+
+		</div>
+		<div style="border-top: 1px solid #333;border-bottom: 1px solid #333;padding:4px;">
+		<p>DEBUG:</p>
+		<p>Number of nodes rendered: <span class="numPatches"></span></p>
+		<!--<p>Distance to horizon: <span class="distHorizon"></span></p>
+		<div class="distance"></div>-->
+		<div class="pointVisible"></div>
+		<div class="debug"></div>
+		</div>
+		<footer id="footer">
+			Copyright © <a href="mailto:icewolfy@gmail.com">Jón Arason</a>
+		</footer>
+		<script src="/libs/jquery-2.1.4.min.js"></script>
+		<script src="/libs/gl-matrix-min.js"></script>
+		<script src="/libs/webgl-utils.js"></script>
+		<script src="/libs/matrixredux.js"></script>
+		<script src="/libs/stats.min.js"></script>
+
+		<script src="/engine/camera.js"></script>
+		<script src="WebGL.js"></script>
+		<script src="/engine/global.js"></script>
+		<script src="/engine/SimplexNoise.js"></script>
+		<script src="/maps/PositionMap.js"></script>
+		<script src="/maps/HeightMap.js"></script>
+		<script src="/maps/NormalMap.js"></script>
+		<script src="/engine/Plane.js"></script>
+		<script src="/engine/AABox.js"></script>
+		<script src="/engine/Frustum.js"></script>
+		<script src="TerrainPatch.js"></script>
+		<script src="/engine/QuadTree.js"></script>
+		<script src="Main.js"></script>
+		<!--<script src="engine-min.js"></script>-->
+
+	</body>
+</html>

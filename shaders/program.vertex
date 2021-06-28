@@ -1,0 +1,92 @@
+precision highp float;
+
+
+attribute vec3 aVertexPosition;
+attribute vec3 aNormal;
+attribute vec2 aUV;
+attribute vec2 aHeightmapTexCoord;
+attribute vec2 normalUV;
+attribute vec3 barycentric;
+
+uniform mat4 uMVMatrixWorld;
+uniform mat4 uMVMatrix;
+uniform mat3 nMatrix;
+uniform mat4 uPMatrix;
+uniform vec3 lightPos;
+uniform float logDepthBufFC;
+uniform vec3 color;
+
+uniform sampler2D uPositionMap;
+uniform sampler2D uHeightMap;
+uniform sampler2D uLUT;
+
+uniform vec3 cameraPos;
+uniform float res;
+uniform vec3 patchPos;
+uniform float uHeightmapOffset;
+
+varying vec2 vHeightmapTexCoord;
+varying vec3 vBC;
+varying highp vec2 vUV;
+varying vec3 normal;
+varying vec3 lightDir;
+varying vec3 v;
+varying highp vec2 texelPos;
+varying vec2 vNormalUV;
+varying float vSample;
+/*
+float DecodeFloatRGBA( vec4 pt ) {
+  return dot( pt, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0) );
+}
+*/
+
+
+float DecodeFloatRGBA( vec4 pt ) {
+  return dot( pt, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0) );
+}
+
+void main()
+{
+	vSample = 1.0 / res;
+	vec3 objectPos = aVertexPosition + patchPos;
+	vec3 currentPos = aVertexPosition;
+
+	vHeightmapTexCoord = aHeightmapTexCoord;
+
+	
+
+	//vec3 bla = aNormal;
+	//normal = aVertexPosition;
+
+	//vec3 lightPos = vec3(0.0, 10.0, 0.0);
+	v = vec3(uMVMatrixWorld * vec4(objectPos, 1.0));
+	vec3 lightPosEye = vec3(uMVMatrixWorld * vec4(lightPos, 1.0));
+	lightDir = lightPosEye - v;
+
+	vUV = aUV;
+	vBC = barycentric;
+
+	texelPos = aUV;
+
+	vNormalUV.x = (aUV.x * (res - 2.0) + 1.0) / res;
+	vNormalUV.y = (aUV.y * (res - 2.0) + 1.0) / res;
+	//vNormalUV = normalUV;
+
+	
+
+
+	
+	//if (height > 0.8)
+	//	height *= 1.05;
+
+	
+	//currentPos -= normalize(objectPos) * 0.05;
+	//currentPos -= objectPos * 0.0225;
+	float height = (texture2D(uHeightMap, aHeightmapTexCoord).r) * 1.5; // Var áður * 4.5
+	currentPos += normalize(objectPos) * height ;
+	//currentPos -= objectPos * 0.01;
+
+	gl_Position = uPMatrix * uMVMatrix * vec4(currentPos, 1.0);
+
+	//gl_Position.z = log2(max(1e-6, gl_Position.w + 1.0)) * logDepthBufFC;
+}

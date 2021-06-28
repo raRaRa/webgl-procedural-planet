@@ -1,0 +1,110 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+html {
+}
+
+canvas {
+	border-right: 1px solid #888;
+	border-bottom: 1px solid #888;
+}
+
+footer {
+	margin-top: 20px;
+}
+
+#canvasWrapper {
+	position: relative;
+}
+
+#console {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 90%;
+	background-color: rgba(0, 0, 0, 0.8);
+	color: white;
+	overflow: auto;
+}
+
+#consoleText {
+	padding: 10px;
+}
+
+#consoleText .error {
+	color: red;
+}
+
+#consoleText a {
+	color: #888;
+}
+
+#consoleInput {
+	padding: 10px;
+}
+
+#consoleInput input {
+	width: 100%;
+	background-color: #555;
+	border: 1px solid #444;
+	padding: 4px;
+	margin: 0;
+	color: white;
+	box-sizing: border-box;
+}
+
+#stats	 {
+	position:absolute;
+	top: 0;
+	left: 0;
+}
+
+.showConsole {
+    -webkit-animation: showConsole .5s 1  normal ease-out;
+    animation: showConsole .5s 1  normal ease-out;
+    animation-fill-mode: forwards;
+    -webkit-animation-fill-mode: forwards;
+}
+
+.hideConsole {
+    -webkit-animation: hideConsole .5s 1  normal ease-out;
+    animation: hideConsole .5s 1  normal ease-out;
+    animation-fill-mode: forwards;
+    -webkit-animation-fill-mode: forwards;
+}
+
+@-webkit-keyframes showConsole {
+    0% {
+        top:-500px;
+    }
+    100% {
+        top: 0px;
+    }
+}
+@keyframes showConsole {
+    0% {
+        top:-500px;
+    }
+    100% {
+        top: 0px;
+    }
+}
+
+@-webkit-keyframes hideConsole {
+    0% {
+        top:0px;
+    }
+    100% {
+        top: -500px;
+    }
+}
+@keyframes hideConsole {
+    0% {
+        top:0px;
+    }
+    100% {
+        top: -500px;
+    }
+}

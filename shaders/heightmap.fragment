@@ -1,0 +1,23 @@
+precision highp float;
+
+uniform sampler2D uPositionMap;
+uniform float res;
+uniform float depth;
+
+varying float vTEXEL_ONE;
+varying vec2 vTextureCoord;
+/*
+vec4 EncodeFloatRGBA( in float h ) {
+    vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * h;
+    enc = fract(enc);
+    enc -= enc.yzww * vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0.0);
+    return enc;
+}*/
+
+void main()
+{
+   // float height = texture2D(uPositionMap, vec2(vNormalUV.x + vTEXEL_ONE, vNormalUV.y + vTEXEL_ONE)).a;
+	float height = texture2D(uPositionMap, vec2(vTextureCoord.x , vTextureCoord.y )).a;
+   // height = (1.0 + height) * 0.5;
+    gl_FragColor = vec4(height);//EncodeFloatRGBA(height);
+}

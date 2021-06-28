@@ -1,0 +1,463 @@
+precision highp float;
+
+
+vec4 mod289(vec4 x) {
+    return x - floor(x * vec4(1.0 / 289.0)) * vec4(289.0);
+}
+
+float mod289(float x) {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec4 permute(vec4 x) {
+    return mod289((( x * vec4(34.0) ) + vec4(1.0))*x);
+}
+
+float permute(float x) {
+    return mod289(((x*34.0)+1.0)*x);
+}
+
+
+vec4 taylorInvSqrt(vec4 r)
+{
+    return 1.79284291400159 - (vec4(0.85373472095314) * r);
+}
+
+float taylorInvSqrt_float(float r)
+{
+    return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+
+vec4 grad4(float j, vec4 ip)
+{
+    const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);
+    vec4 p,s;
+
+    vec3 temp = vec3(j, j, j) * vec3(ip.x, ip.y, ip.z);
+    temp = fract(temp);
+    temp = temp * 7.0;
+    temp = floor(temp);
+    temp = temp * vec3(ip.z);
+
+    temp = ( temp ) - vec3(1.0);
+    float temp2 = 1.5 - dot(abs(temp.xyz), ones.xyz);
+    p = vec4(temp, temp2);
+    s = vec4(lessThan(p, vec4(0.0)));
+    p.xyz = p.xyz + (s.xyz*2.0 - vec3(1.0) ) * s.www;
+
+    return p;
+}
+
+
+float snoise(vec4 v)
+{
+    const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4
+                          0.276393202250021,  // 2 * G4
+                          0.414589803375032,  // 3 * G4
+                          -0.447213595499958); // -1 + 4 * G4
+
+	// (sqrt(5) - 1)/4 = F4, used once below
+	const float F4 = 0.309016994374947451;
+
+	// First corner
+    vec4 i  = floor(v + dot(v, vec4(F4)) );
+    vec4 x0 = v - i + dot(i, C.xxxx);
+
+	// Other corners
+
+	// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)
+    vec4 i0;
+    vec3 isX = step( x0.yzw, x0.xxx );
+    vec3 isYZ = step( x0.zww, x0.yyz );
+    i0.x = isX.x + isX.y + isX.z;
+    i0.yzw = (1.0 - isX).xyz;
+    i0.y += isYZ.x + isYZ.y;
+    i0.zw += (1.0 - isYZ.xy).xy;
+    i0.z += isYZ.z;
+    i0.w += 1.0 - isYZ.z;
+
+    // i0 now contains the unique values 0,1,2,3 in each channel
+    vec4 i3 = clamp( i0, 0.0, 1.0 );
+    vec4 i2 = clamp( i0-vec4(1.0), 0.0, 1.0 );
+    vec4 i1 = clamp( i0-vec4(2.0), 0.0, 1.0 );
+
+    //  x0 = x0 - 0.0 + 0.0 * C.xxxx
+    //  x1 = x0 - i1  + 1.0 * C.xxxx
+    //  x2 = x0 - i2  + 2.0 * C.xxxx
+    //  x3 = x0 - i3  + 3.0 * C.xxxx
+    //  x4 = x0 - 1.0 + 4.0 * C.xxxx
+    vec4 x1 = x0 - i1 + C.xxxx;
+    vec4 x2 = x0 - i2 + C.yyyy;
+    vec4 x3 = x0 - i3 + C.zzzz;
+    vec4 x4 = x0 + C.wwww;
+
+	// Permutations
+    i = mod289(i);
+    float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);
+    
+
+    /*vec4 j1 = permute( permute( permute( permute (
+            i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))
+                                         + i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))
+                                + i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))
+                       + i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));*/
+
+    vec4 j1_tmp1 = permute( vec4(i.w, i.w, i.w, i.w) + vec4(i1.w, i2.w, i3.w, 1.0 ) );
+    vec4 j1_tmp2 = permute( j1_tmp1 + vec4(i.z, i.z, i.z, i.z) + vec4(i1.z, i2.z, i3.z, 1.0) );
+    vec4 j1_tmp3 = permute( j1_tmp2 + vec4(i.y, i.y, i.y, i.y) + vec4(i1.y, i2.y, i3.y, 1.0) );
+    vec4 j1 = permute( j1_tmp3 + vec4(i.x, i.x, i.x, i.x) + vec4(i1.x, i2.x, i3.x, 1.0) );
+
+	// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope
+	// 7*7*6 = 294, which is close to the ring size 17*17 = 289.
+    vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;
+
+    vec4 p0 = grad4(j0,   ip);
+    vec4 p1 = grad4(j1.x, ip);
+    vec4 p2 = grad4(j1.y, ip);
+    vec4 p3 = grad4(j1.z, ip);
+    vec4 p4 = grad4(j1.w, ip);
+
+	// Normalise gradients
+   /* vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+    p0 *= norm.x;
+    p1 *= norm.y;
+    p2 *= norm.z;
+    p3 *= norm.w;
+    p4 *= taylorInvSqrt(dot(p4,p4));*/
+
+    vec4 norm = taylorInvSqrt( vec4( dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3) ) );
+    p0 = p0 * norm.x;
+    p1 = p1 * norm.y;
+    p2 = p2 * norm.z;
+    p3 *= norm.w;
+    p4 *= taylorInvSqrt_float(dot(p4,p4));
+
+	// Mix contributions from the five corners
+    /*vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
+    vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);
+    m0 = m0 * m0;
+    m1 = m1 * m1;
+    return 49.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 )))
+                    + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;*/
+
+
+    vec3 m0 = max(vec3(0.6, 0.6, 0.6) - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);
+    vec2 m1 = max(vec2(0.6, 0.6) - vec2(dot(x3,x3), dot(x4,x4) ), 0.0);
+    m0 *= m0;
+    m1 *= m1;
+    return 49.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 )))
+                    + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;
+}
+
+const int octaves = 11;
+
+float octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time)
+{
+    float n = 0.0;
+    float octaveAmplitude = 1.0/(1.0-pow(roughness,(float(octaves))));
+    for (int i = 0; i < octaves; i++) {
+        n += octaveAmplitude * snoise(vec4(freq*p, time));
+        octaveAmplitude *= roughness;
+        freq *= lacunarity;
+    }
+    return (n+1.0)*0.5;
+}
+
+float octavenoise_1(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time)
+{
+    float n = 0.0;
+    float octaveAmplitude = 1.0/(1.0-pow(roughness,(float(octaves))));
+    for (int i = 0; i < octaves - 3; i++) {
+        n += octaveAmplitude * snoise(vec4(freq*p, time));
+        octaveAmplitude *= roughness;
+        freq *= lacunarity;
+    }
+    return (n+1.0)*0.5;
+}
+
+float combo_octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time)
+{
+    float n = 0.0;
+    float n1 = 0.0;
+    float octaveAmplitude = 1.0/(1.0-pow(roughness,(float(octaves))));
+    for (int i = 0; i < octaves; i++) {
+        n += octaveAmplitude * snoise(vec4(freq*p, time));
+        octaveAmplitude *= roughness;
+        freq *= lacunarity;
+    }
+    //ridged noise
+    n1 = 1.0 - abs(n);
+    n1 *= n1;
+    //billow noise
+    n1 *= (2.0 * abs(n) - 1.0)+1.0;
+    //voronoiscam noise
+    n1 *= sqrt(10.0 * abs(n));
+    return n1;
+}
+/*
+float ridged_octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time)
+{
+    float n = 0.0;
+    float octaveAmplitude = 1.0/(1.0-pow(roughness,(float(octaves))));
+    for (int i = 0; i < octaves; i++) {
+        n += octaveAmplitude * snoise(vec4(freq*p, time));
+        octaveAmplitude *= roughness;
+        freq *= lacunarity;
+    }
+    //ridged noise
+    n = 1.0 - abs(n);
+    return(n*n);
+}*/
+
+// ridged multifractal terrain (p.504)
+/*
+float fBm3(in vec3 p, in float H, in float lacunarity, in float offset, in float gain, in float time, in float frequency) {
+    float result; 
+    //float frequency = 1.0; 
+    float signal;
+    float weight;
+
+    signal = offset - abs(snoise(vec4(p, time)));
+    signal*= signal;
+    result = signal;
+    weight = 1.0;
+
+    for(int i = 0; i < 3; i++) {
+        p*= lacunarity;
+        weight = clamp(signal*gain, 0.0, 1.0);
+        signal = offset - abs(snoise(vec4(p, time)));
+        signal*= signal * weight;
+        result+= signal * pow(frequency, -H);
+        frequency*= lacunarity;
+    }
+
+    return result;
+
+}*/
+
+float ridge(float h, float offset)
+{
+    h = abs(h);
+    h = offset - h;
+    h = h * h;
+    return h;
+}
+
+float fBm3_new(in vec3 p, in float lacunarity, in float gain, in float offset)
+{
+    float sum = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+    float prev = 1.0;
+
+    for (int i = 0; i < 12; i++)
+    {
+        float n = ridge(snoise( vec4(p * frequency, 1.0)), offset);
+        sum += n * amplitude * prev;
+        prev = n;
+        frequency *= lacunarity;
+        amplitude *= gain;
+    }
+
+    return sum;
+}
+
+
+
+float fBm3(in vec3 p, in float H, in float lacunarity, in float offset, in float gain, in float time, in float frequency) {
+    float result; 
+    //float frequency = 1.0; 
+    float signal;
+    float weight;
+
+    signal = offset - abs(snoise(vec4(p, time)));
+    signal*= signal;
+    result = signal;
+    weight = 1.0;
+
+    for(int i = 0; i < 12; i++) {
+        p*= lacunarity;
+        weight = clamp(signal*gain, 0.0, 1.0);
+        signal = offset - abs(snoise(vec4(p, time)));
+        signal*= signal * weight;
+        result+= signal * pow(frequency, -H);
+        frequency*= lacunarity;
+    }
+
+    return result;
+
+}
+
+
+float billow_octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time)
+{
+    float n = 0.0;
+    float octaveAmplitude = 1.0/(1.0-pow(roughness,(float(octaves))));
+    for (int i = 0; i < octaves; i++) {
+        n += octaveAmplitude * snoise(vec4(freq*p, time));
+        octaveAmplitude *= roughness;
+        freq *= lacunarity;
+    }
+    //ridged noise
+    n = (2.0 * abs(n) - 1.0)+1.0;
+    return(n);
+}
+
+/*float dunes_octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time) {
+	float n = 0.0;
+	float octaveAmplitude = roughnedunes_octavenoisess;
+	for (int i=0; i<octaves; i++) {
+		n += octaveAmplitude * snoise(vec4(freq*p,1.0));
+		octaveAmplitude *= roughness;
+		freq *= lacunarity;
+	}
+	return 1.0 - abs(n);
+}
+*/
+float river_octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq) {
+	float n = 0.0;
+	float octaveAmplitude = roughness;
+	for (int i=0; i<octaves - 3; i++) {
+		n += octaveAmplitude * abs(snoise(vec4(freq*p,1.0)));
+		octaveAmplitude *= roughness;
+		freq *= lacunarity;
+	}
+	return n;
+}
+
+float voronoiscam_octavenoise(in float roughness, in float lacunarity, in vec3 p, in float freq, in float time) {
+	float n = 0.0;
+	float octaveAmplitude = roughness;
+	for (int i=0; i<octaves; i++) {
+		n += octaveAmplitude * snoise(vec4(freq*p,1.0));
+		octaveAmplitude *= roughness;
+		freq *= lacunarity;
+	}
+	return sqrt(10.0 * abs(n));
+}
+	
+/*
+vec4 EncodeFloatRGBA( in float h ) {
+  vec4 enc = vec4(1.0, 255.0, 65025.0, 160581375.0) * h;
+  enc = fract(enc);
+  enc -= enc.yzww * vec4(1.0/255.0,1.0/255.0,1.0/255.0,0.0);
+  return enc;
+}
+*/
+
+float getTerraced(float val, float n, float power)
+{
+    float dVal = val * n;
+    float f = fract(dVal);
+    float i = floor(dVal);
+
+    return (i + pow(f, power)) / n;
+}
+
+vec3 getSpherePos(in vec3 pos) {
+    float tempX2 = pos.x * pos.x;
+    float tempY2 = pos.y * pos.y;
+    float tempZ2 = pos.z * pos.z;
+
+    vec3 spherePos;
+    spherePos.x = pos.x * sqrt( 1.0 - (tempY2) / 2.0 - (tempZ2) / 2.0 + (tempY2 * tempZ2) / 3.0 );
+    spherePos.y = pos.y * sqrt( 1.0 - (tempZ2) / 2.0 - (tempX2) / 2.0 + (tempZ2 * tempX2) / 3.0 );
+    spherePos.z = pos.z * sqrt( 1.0 - (tempX2) / 2.0 - (tempY2) / 2.0 + (tempX2 * tempY2) / 3.0 );
+
+    return spherePos;
+}
+
+uniform vec3 v0;
+//uniform vec3 v1;
+uniform vec3 v2;
+uniform vec3 v3;
+uniform vec3 debugvalues;
+uniform highp float uTexelStep;
+
+varying mediump vec2 vTextureCoord;
+
+void main()
+{
+  /*  vec3 xNW = v0;
+    vec3 xNE = v1;
+    vec3 xSW = v2;
+*/
+
+    //vec2 texelInterpolation = vTextureCoord;
+
+  //  float halfpixel = 1.0/260.0;//(1.0 / 128.0) * 0.5;
+   // vec2 f = vec2((vTextureCoord.x * 128.0 - 0.5) / 127.0, (vTextureCoord.y * 128.0 - 0.5) / 127.0);
+
+   // float mul = 1.0/(1.0+2.0*halfpixel);
+   // vec2 f = (vTextureCoord - halfpixel) * mul;
+
+   // float mul = 1.0 / (1.0 - 2.0 * halfpixel); // same as 128 / 127
+  //  float mul = 1.0 / (1.0 - 2.0 * halfpixel);
+  //  vec2 f = (vTextureCoord - halfpixel) * mul;
+
+
+    //y = y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+
+    
+    vec2 f = (gl_FragCoord.xy - 0.5) / 130.0;
+
+    //f.x = f.x - halfpixel * 2.0;
+
+   // texelInterpolation = texelInterpolation * (1.0 + (1.0 / 128.0) * 2.0);
+
+    // Get the direction, from the origin (top-left) to the end vector (bottom-right).
+    vec3 xDirection = v2;
+    vec3 zDirection = v3;
+
+    // Scale the distance by the texture coordinate (which is between 0 and 1).
+    xDirection *= f.x;
+    zDirection *= f.y;
+
+    vec3 texelPos = (v0) + xDirection + zDirection;
+
+   // texelPos -= (2.0 / 128.0);
+/*
+
+     if (texelPos.z > (1.0 - 1.0/128.0 * 0.0) && texelPos.x == -1.0) {
+        texelPos = vec3(-texelPos.z - 1.0/128.0, texelPos.y, 1.0);
+    }
+*/
+
+
+    /*if (texelPos.x < -1.0 && texelPos.y > 1.0 && texelPos.z == 1.0) {
+        texel
+    }*/
+    /*if (texelPos.x < -1.0 && texelPos.z == 1.0) {
+        texelPos = vec3(-1.0, texelPos.y, -texelPos.x - uTexelStep);
+    }
+    else if (texelPos.y > 1.0 && texelPos.z == 1.0) {
+        texelPos = vec3(texelPos.x, 1.0, texelPos.y - uTexelStep);
+    }
+*/
+
+    //vec3 spherePos = getSpherePos(pos);
+    vec3 pos = getSpherePos(texelPos) * 14.0;
+
+   // float mountains = octavenoise(0.8, 1.8, pos, 0.01, 1.0); // 1.7.2015
+   // mountains = smoothstep(mountains, 1.0, 0.0);
+   //float fBm3(in vec3 p, in float H, in float lacunarity, in float offset, in float gain, in float time, in float frequency) {
+    //float height = (fBm3(pos * 0.5, 0.05, 3.0, 0.7, 1.0, 1.0, 0.03)) / 10.0; //* mountains;
+    //fBm3_new(in vec3 p, in float lacunarity, in float gain, in float offset)
+    float height = fBm3_new(pos * 0.5, 1.5, 0.5, 1.0) / 10.0;
+   /* float tDef = octavenoise_1(1.3, 1.3, pos, 0.8, 3.0) - 0.0;
+    tDef = smoothstep(0.5, 0.7, tDef);
+
+
+    // height, bigger = more steps, steep?
+    height = getTerraced(height, 120.0, 1.0 + tDef*1.5 );
+*/
+
+
+    gl_FragColor = vec4((pos) * 11.0 + (pos) * height * 4.0, height);
+
+
+
+
+	//gl_FragColor = vec4(height, 0.0, 0.0, 1.0);
+}

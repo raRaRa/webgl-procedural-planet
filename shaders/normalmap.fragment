@@ -1,0 +1,46 @@
+precision highp float;
+
+uniform sampler2D uPositionMap;
+uniform float res;
+uniform float depth;
+uniform float normalMul;
+
+varying highp vec2 vTextureCoord;
+varying float vTEXEL_ONE;
+varying vec2 vNormalUV;
+
+vec3 getPosMap(in vec2 p) {
+    return texture2D(uPositionMap, p).rgb;
+}
+
+vec3 getPositionMapNormal() {
+    vec2 tpos = vNormalUV;
+
+    float one = vTEXEL_ONE;
+    float two = one + one;
+//  float two = NORMAL_OFF + NORMAL_OFF;
+    //float texel = getPoint(vec2(tpos.x + one, tpos.y + one));
+
+    vec3 currentPos = getPosMap(vec2(tpos.x + one, tpos.y + one));
+
+    vec3 e0 = getPosMap(vec2(tpos.x      , tpos.y + one)) - currentPos;
+    vec3 e1 = getPosMap(vec2(tpos.x + two, tpos.y + one)) - currentPos;
+    vec3 e2 = getPosMap(vec2(tpos.x + one, tpos.y      )) - currentPos;
+    vec3 e3 = getPosMap(vec2(tpos.x + one, tpos.y + two)) - currentPos;
+//
+    vec3 n0 = cross(e0, e2);
+    vec3 n1 = cross(e1, e3);
+
+    return normalize(n0 + n1) * normalMul;
+}
+
+
+void main()
+{
+    vec3 normal = getPositionMapNormal();
+
+   // float height = texture2D(uPositionMap, vTextureCoord).a;//vec2(vNormalUV.x + vSample, vNormalUV.y + vSample)).a;
+    float height = texture2D(uPositionMap, vec2(vNormalUV.x + vTEXEL_ONE, vNormalUV.y + vTEXEL_ONE)).a;
+
+    gl_FragColor = vec4((1.0 + normal) * 0.5, 1.0);
+}

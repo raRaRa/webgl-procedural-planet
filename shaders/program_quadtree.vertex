@@ -1,0 +1,49 @@
+precision highp float;
+
+
+attribute vec3 aVertexPosition;
+attribute vec2 aUV;
+attribute vec3 barycentric;
+
+uniform mat4 uMVMatrixWorld;
+uniform mat4 uMVMatrix;
+uniform mat3 nMatrix;
+uniform mat4 uPMatrix;
+uniform float logDepthBufFC;
+uniform vec3 color;
+
+uniform vec3 cameraPos;
+uniform float res;
+uniform vec3 patchPos;
+
+varying vec3 vBC;
+varying vec3 v;
+/*
+float DecodeFloatRGBA( vec4 pt ) {
+  return dot( pt, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0) );
+}
+*/
+
+
+float DecodeFloatRGBA( vec4 pt ) {
+  return dot( pt, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 160581375.0) );
+}
+
+void main()
+{
+	vec3 objectPos = aVertexPosition + patchPos;
+	vec3 currentPos = aVertexPosition;
+
+
+	v = vec3(uMVMatrixWorld * vec4(objectPos, 1.0));
+
+	vBC = barycentric;
+
+	float height = 0.0005; // Var áður * 4.5
+	currentPos += normalize(objectPos) * height ;
+	//currentPos -= objectPos * 0.01;
+
+	gl_Position = uPMatrix * uMVMatrix * vec4(currentPos, 1.0);
+
+	//gl_Position.z = log2(max(1e-6, gl_Position.w + 1.0)) * logDepthBufFC;
+}

@@ -1,0 +1,11 @@
+attribute vec3 aVertexPosition;
+attribute vec2 aTextureCoord;
+
+varying mediump vec2 vTextureCoord;
+varying highp vec3 vUV;
+
+void main()
+{
+	vTextureCoord = aTextureCoord;
+	gl_Position = vec4(aVertexPosition.xyz, 1.0);
+}

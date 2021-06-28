@@ -1,0 +1,29 @@
+attribute vec3 aVertexPosition;
+attribute vec2 aTextureCoord;
+
+uniform sampler2D uPositionMap;
+uniform float res;
+uniform float depth;
+
+varying float vTEXEL_ONE;
+varying vec2 vTextureCoord;
+
+
+varying highp vec3 vUV;
+
+void main()
+{
+/*	vTEXEL_ONE = 1.0 / (res + 2.0);
+
+	vNormalUV.x = (aTextureCoord.x * (res) + 1.0) / (res + 2.0);
+	vNormalUV.y = (aTextureCoord.y * (res) + 1.0) / (res + 2.0);*/
+
+
+	//vTEXEL_ONE = 1.0 / (res);
+
+	//vNormalUV.x = (aTextureCoord.x);
+	//vNormalUV.y = (aTextureCoord.y);
+
+	vTextureCoord = aTextureCoord;
+	gl_Position = vec4(aVertexPosition.xyz, 1.0);
+}
